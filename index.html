@@ -254,8 +254,14 @@ window.addToCart = async function(name, price) {
             items = snapshot.data().items || [];
         }
 
-        // просто добавляем новый товар (без магии arrayUnion)
-        items.push({ name, price });
+        // ищем уже существующий товар
+        const existing = items.find(item => item.name === name);
+
+        if (existing) {
+            existing.qty += 1;
+        } else {
+            items.push({ name, price, qty: 1 });
+        }
 
         await setDoc(cartRef, { items });
 
@@ -274,7 +280,11 @@ window.removeFromCart = async function(index) {
 
     let items = snapshot.data().items || [];
 
-    items.splice(index, 1);
+    if (items[index].qty > 1) {
+        items[index].qty -= 1;
+    } else {
+        items.splice(index, 1);
+    }
 
     await setDoc(cartRef, { items });
 };
@@ -299,20 +309,24 @@ onSnapshot(cartRef, (docSnap) => {
 
     let html = "";
     let total = 0;
+    let count = 0;
 
     items.forEach((item, index) => {
-        total += item.price;
+
+        total += item.price * item.qty;
+        count += item.qty;
 
         html += `
             <div style="margin-bottom:8px;">
-                ${item.name} — ${item.price} ₽
-                <button onclick="removeFromCart(${index})">❌</button>
+                ${item.name} — ${item.price} ₽ × ${item.qty}
+                <button onclick="addToCart('${item.name}', ${item.price})">➕</button>
+                <button onclick="removeFromCart(${index})">➖</button>
             </div>
         `;
     });
 
     html += `<hr>`;
-    html += `<b>Товаров:</b> ${items.length} <br>`;
+    html += `<b>Товаров:</b> ${count} <br>`;
     html += `<b>Итого:</b> ${total} ₽`;
 
     cartList.innerHTML = html;
