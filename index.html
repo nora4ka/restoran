@@ -221,35 +221,89 @@
 
   <!-- Firebase SDK -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getFirestore, collection, doc, onSnapshot, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-  
-  // Конфигурация Firebase
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getFirestore, doc, onSnapshot, setDoc, arrayUnion, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyAbfKtVHInassal4adiWHE309VOQpEl4DQ",
   authDomain: "restaurantapp-a18f7.firebaseapp.com",
   projectId: "restaurantapp-a18f7",
   storageBucket: "restaurantapp-a18f7.firebasestorage.app",
   messagingSenderId: "24145843513",
-  appId: "1:24145843513:web:5ffc3f6fbe1a77313c84e8",
-  measurementId: "G-710M5BBNHQ"
+  appId: "1:24145843513:web:5ffc3f6fbe1a77313c84e8"
 };
-  
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const cartRef = doc(db, "cart", "sharedCart");
-  
-  // Делаем db глобальной
-  window.db = db;
-  window.collection = collection;
-  window.doc = doc;
-  window.onSnapshot = onSnapshot;
-  window.setDoc = setDoc;
-  window.deleteDoc = deleteDoc;
-  window.updateDoc = updateDoc;
-  window.arrayUnion = arrayUnion;
-  window.arrayRemove = arrayRemove;
-  window.cartRef = cartRef;
+
+// init
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// корзина
+const cartRef = doc(db, "cart", "sharedCart");
+
+// ----------------------
+// ДОБАВЛЕНИЕ
+// ----------------------
+window.addToCart = async function(name, price) {
+    try {
+        await setDoc(cartRef, {
+            items: arrayUnion({ name, price })
+        }, { merge: true });
+    } catch (e) {
+        console.error("Ошибка добавления:", e);
+    }
+};
+
+// ----------------------
+// УДАЛЕНИЕ
+// ----------------------
+window.removeFromCart = async function(index) {
+    const snapshot = await getDoc(cartRef);
+    const items = snapshot.data().items || [];
+
+    const newItems = items.filter((_, i) => i !== index);
+
+    await setDoc(cartRef, { items: newItems });
+};
+
+// ----------------------
+// СЛУШАЕМ КОРЗИНУ
+// ----------------------
+onSnapshot(cartRef, (docSnap) => {
+    const cartList = document.getElementById("cartList");
+
+    if (!docSnap.exists()) {
+        cartList.innerHTML = "Корзина пуста";
+        return;
+    }
+
+    const items = docSnap.data().items || [];
+
+    if (items.length === 0) {
+        cartList.innerHTML = "Корзина пуста";
+        return;
+    }
+
+    let html = "";
+    let total = 0;
+
+    items.forEach((item, index) => {
+        total += item.price;
+
+        html += `
+            <div style="margin-bottom:8px;">
+                ${item.name} — ${item.price} ₽
+                <button onclick="removeFromCart(${index})">❌</button>
+            </div>
+        `;
+    });
+
+    html += `<hr>`;
+    html += `<b>Товаров:</b> ${items.length} <br>`;
+    html += `<b>Итого:</b> ${total} ₽`;
+
+    cartList.innerHTML = html;
+});
 </script>
 
 </head>
@@ -706,66 +760,6 @@ const firebaseConfig = {
         downloadLink.style.display = "inline-block";
         downloadLink.innerText = "Скачать new_order_data.json";
     }
-
-// =========================
-// КОРЗИНА (Firebase)
-// =========================
-
-// ДОБАВИТЬ В КОРЗИНУ
-async function addToCart(name, price) {
-    try {
-        await setDoc(cartRef, {
-            items: arrayUnion({
-                name: name,
-                price: price
-            })
-        }, { merge: true });
-
-    } catch (e) {
-        console.error("Ошибка добавления:", e);
-    }
-}
-
-// СЛУШАЕМ ИЗМЕНЕНИЯ (магия синхронизации 🔥)
-onSnapshot(cartRef, (docSnap) => {
-    const cartList = document.getElementById("cartList");
-
-    if (!docSnap.exists()) {
-        cartList.innerHTML = "Корзина пуста";
-        return;
-    }
-
-    const data = docSnap.data();
-    const items = data.items || [];
-
-    if (items.length === 0) {
-        cartList.innerHTML = "Корзина пуста";
-        return;
-    }
-
-    let html = "";
-
-    items.forEach((item, index) => {
-        html += `
-            <div>
-                ${item.name} — ${item.price} ₽
-                <button onclick="removeFromCart(${index})">❌</button>
-            </div>
-        `;
-    });
-
-    cartList.innerHTML = html;
-});
-
-// УДАЛЕНИЕ (упрощённое)
-async function removeFromCart(index) {
-    const snapshot = await getDoc(cartRef);
-    const items = snapshot.data().items;
-
-    const newItems = items.filter((_, i) => i !== index);
-
-    await setDoc(cartRef, { items: newItems });
-}
 
 </script>
 </body>
