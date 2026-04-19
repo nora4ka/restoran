@@ -246,9 +246,19 @@ const cartRef = doc(db, "cart", "sharedCart");
 // ----------------------
 window.addToCart = async function(name, price) {
     try {
-        await setDoc(cartRef, {
-            items: arrayUnion({ name, price })
-        }, { merge: true });
+        const snapshot = await getDoc(cartRef);
+
+        let items = [];
+
+        if (snapshot.exists()) {
+            items = snapshot.data().items || [];
+        }
+
+        // просто добавляем новый товар (без магии arrayUnion)
+        items.push({ name, price });
+
+        await setDoc(cartRef, { items });
+
     } catch (e) {
         console.error("Ошибка добавления:", e);
     }
@@ -259,11 +269,14 @@ window.addToCart = async function(name, price) {
 // ----------------------
 window.removeFromCart = async function(index) {
     const snapshot = await getDoc(cartRef);
-    const items = snapshot.data().items || [];
 
-    const newItems = items.filter((_, i) => i !== index);
+    if (!snapshot.exists()) return;
 
-    await setDoc(cartRef, { items: newItems });
+    let items = snapshot.data().items || [];
+
+    items.splice(index, 1);
+
+    await setDoc(cartRef, { items });
 };
 
 // ----------------------
