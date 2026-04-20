@@ -318,7 +318,7 @@ onSnapshot(cartRef, (docSnap) => {
 
         html += `
             <div style="margin-bottom:8px;">
-                <div style="display: flex; gap: 10px; width: 100%;">
+                <div style="display: flex; gap: 10px; width: 100%; text-align: center;">
                 ${item.name} — ${item.price} ₽ × ${item.qty}
                 <button style="width: 20%;" onclick="addToCart('${item.name}', ${item.price})">+</button>
                 <button style="width: 20%;" onclick="removeFromCart(${index})">-</button>
